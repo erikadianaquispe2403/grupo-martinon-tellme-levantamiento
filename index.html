@@ -212,7 +212,7 @@
 <section class="card" id="s4" data-title="4 · Mapeo">
   <div class="card-head"><h2>4. Mapeo de casos Tell Me → MaintainX</h2><span class="pct"></span></div>
   <div class="card-body">
-    <p class="hint">Agregar las categorías o casos observados. No todos los casos de Tell Me deben generar una OT.</p>
+    <p class="hint">Agregar las categorías o casos observados. No todos los casos de Tell Me deben generar una OT. Usar «Extra (propuesto)» para pedidos de huésped que no son incidencias (toallas, agua, snacks, amenidades).</p>
     <div id="casos"></div>
     <button class="secondary" type="button" id="addCaso">+ Agregar caso / categoría</button>
   </div>
@@ -368,12 +368,14 @@ function addCaso(v={}){
   d.innerHTML=`<button type="button" class="del" aria-label="Eliminar caso">×</button>
   <div class="grid2">
     <div><label class="l">Caso / categoría Tell Me</label><input class="c-nombre" type="text" value="${esc(v.caso)}"></div>
+    <div><label class="l">Tipo de ticket en Tell Me</label><select class="c-tipo"><option value="">Seleccionar…</option><option>Falla</option><option>Falta de información</option><option>Request</option><option>Extra (propuesto)</option></select></div>
     <div><label class="l">Área responsable</label><input class="c-area" type="text" value="${esc(v.area)}"></div>
     <div><label class="l">¿Genera OT en MaintainX?</label><select class="c-mx"><option>Por definir</option><option>Sí</option><option>No</option></select></div>
     <div><label class="l">Prioridad / SLA</label><input class="c-prio" type="text" value="${esc(v.prioridad)}"></div>
   </div>
   <label class="l">Observación</label><textarea class="c-obs">${esc(v.observacion)}</textarea>`;
   if(v.maintainx) d.querySelector(".c-mx").value=v.maintainx;
+  if(v.tipo) d.querySelector(".c-tipo").value=v.tipo;
   d.querySelector(".del").onclick=()=>{ d.remove(); onChange(); };
   $("casos").appendChild(d);
 }
@@ -398,7 +400,7 @@ function collect(){
   e.modulos=pillVals(document.querySelector('[data-group="modulos"]'));
   e.paralelos=pillVals(document.querySelector('[data-group="paralelos"]'));
   e.campos=[...document.querySelectorAll(".frow")].map(r=>({campo:r.dataset.campo,disponible:pillVals(r.querySelector(".disp"))[0]||"",origen:pillVals(r.querySelector(".orig"))[0]||"",nota:r.querySelector(".fnote").value.trim()}));
-  e.casos=[...document.querySelectorAll(".caso")].map(c=>({caso:c.querySelector(".c-nombre").value.trim(),area:c.querySelector(".c-area").value.trim(),maintainx:c.querySelector(".c-mx").value,prioridad:c.querySelector(".c-prio").value.trim(),observacion:c.querySelector(".c-obs").value.trim()})).filter(c=>c.caso||c.area||c.prioridad||c.observacion);
+  e.casos=[...document.querySelectorAll(".caso")].map(c=>({caso:c.querySelector(".c-nombre").value.trim(),tipo:c.querySelector(".c-tipo").value,area:c.querySelector(".c-area").value.trim(),maintainx:c.querySelector(".c-mx").value,prioridad:c.querySelector(".c-prio").value.trim(),observacion:c.querySelector(".c-obs").value.trim()})).filter(c=>c.caso||c.area||c.prioridad||c.observacion);
   e.acciones=[...document.querySelectorAll(".accion")].map(c=>({accion:c.querySelector(".a-acc").value.trim(),responsable:c.querySelector(".a-resp").value.trim(),fecha:c.querySelector(".a-fecha").value})).filter(a=>a.accion||a.responsable);
   return e;
 }
@@ -554,7 +556,7 @@ function modelSingle(e){
   B.push({t:"h2",text:"3. Datos disponibles en Tell Me"},modelKpis(campos),
     {t:"table",head:["Campo","Disponible","Origen","Observación"],widths:[32,16,16,36],rows:campos.map(c=>[C(c.campo),C(c.disponible||"—",dispCls(c.disponible),true),C(c.origen||"—"),C(c.nota)])});
   B.push({t:"h2",text:"4. Mapeo de casos Tell Me → MaintainX"});
-  B.push((e.casos||[]).length?{t:"table",head:["Caso / categoría","Área responsable","¿Genera OT?","Prioridad / SLA","Observación"],widths:[22,18,13,17,30],rows:e.casos.map(c=>[C(c.caso),C(c.area),C(c.maintainx,otCls(c.maintainx),true),C(c.prioridad),C(c.observacion)])}:{t:"p",text:"Sin casos registrados.",empty:true});
+  B.push((e.casos||[]).length?{t:"table",head:["Caso / categoría","Tipo de ticket","Área responsable","¿Genera OT?","Prioridad / SLA","Observación"],widths:[19,13,15,11,15,27],rows:e.casos.map(c=>[C(c.caso),C(c.tipo,c.tipo==="Extra (propuesto)"?"pv":undefined,c.tipo==="Extra (propuesto)"),C(c.area),C(c.maintainx,otCls(c.maintainx),true),C(c.prioridad),C(c.observacion)])}:{t:"p",text:"Sin casos registrados.",empty:true});
   B.push({t:"h2",text:"5. Seguimiento, cierre y reportes"},{t:"kv",rows:[["Cierre de casos",e.cierre],["Comentario obligatorio antes del cierre",e.comentario_cierre],["Casos antiguos / sin reserva / cierres manuales IT",e.errores],["Reportes y exportación",e.reportes],["Alertas y escalamiento",e.alertas]]});
   B.push({t:"h2",text:"6. Integración Tell Me ↔ MaintainX"},{t:"kv",rows:[["Tell Me → MaintainX",e.ida],["MaintainX → Tell Me",e.retorno],["Identificador / duplicados",e.vinculo],["Dependencias técnicas IT",e.it]]});
   B.push({t:"h2",text:"7. Hallazgos y plan de acción"},{t:"h3",text:"Hallazgos clave"},{t:"p",text:e.hallazgos||ND,empty:!e.hallazgos});
@@ -589,7 +591,7 @@ function modelConsolidated(hotel,list){
     })});
   const casos=list.flatMap(e=>(e.casos||[]).map(c=>({...c,fuente:perfilLabel(e)})));
   B.push({t:"h2",text:"4. Mapeo de casos Tell Me → MaintainX"});
-  B.push(casos.length?{t:"table",head:["Caso / categoría","Área","¿Genera OT?","Prioridad / SLA","Observación","Fuente"],widths:[19,14,11,14,26,16],rows:casos.map(c=>[C(c.caso),C(c.area),C(c.maintainx,otCls(c.maintainx),true),C(c.prioridad),C(c.observacion),C(c.fuente)])}:{t:"p",text:"Sin casos registrados.",empty:true});
+  B.push(casos.length?{t:"table",head:["Caso / categoría","Tipo","Área","¿Genera OT?","Prioridad / SLA","Observación","Fuente"],widths:[17,12,12,10,13,22,14],rows:casos.map(c=>[C(c.caso),C(c.tipo,c.tipo==="Extra (propuesto)"?"pv":undefined,c.tipo==="Extra (propuesto)"),C(c.area),C(c.maintainx,otCls(c.maintainx),true),C(c.prioridad),C(c.observacion),C(c.fuente)])}:{t:"p",text:"Sin casos registrados.",empty:true});
   byQ("5. Seguimiento, cierre y reportes",[["Cierre de casos",e=>e.cierre],["Comentario obligatorio antes del cierre",e=>e.comentario_cierre],["Casos antiguos / sin reserva / cierres manuales IT",e=>e.errores],["Reportes y exportación",e=>e.reportes],["Alertas y escalamiento",e=>e.alertas]]);
   byQ("6. Integración Tell Me ↔ MaintainX",[["Tell Me → MaintainX",e=>e.ida],["MaintainX → Tell Me",e=>e.retorno],["Identificador / duplicados",e=>e.vinculo],["Dependencias técnicas IT",e=>e.it]]);
   byQ("7. Hallazgos clave",[["Hallazgos",e=>e.hallazgos]]);
